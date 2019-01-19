@@ -3,16 +3,27 @@ import React from "react";
 
 export const VersionSelector = (props) => {
 	const onChange = (event) => {
-		props.onChangeVersion({ version: event.target.value });
+		props.onChangeVersionId({ versionId: event.target.value });
 	};
 
 	return <>
 		<div className="row">
-			<div className="col-md-5">
-				<label htmlFor="versionSelector">Select version of document {props.documentName}</label>
+			<div className="col-md-4">
+				<label htmlFor="versionSelector">Select version</label>
 			</div>
-			<div className="col-md-7" >
-				<input type="text" value={props.version} onChange={onChange} className="form-control" id="versionSelector" />
+			<div className="col-md-8">
+				<select value={props.currentVersionId}
+					onChange={onChange}
+					className="form-control"
+					id="versionSelector"
+				>
+					{props.availableVersions.map((version, ix) =>
+						<option value={version.versionId} key={ix}>
+							{version.isPublished ? "*" : ""}
+							{version.versionId}
+							{version.label && `(${version.label})`}
+						</option>)}
+				</select>
 			</div>
 		</div>
 	</>;

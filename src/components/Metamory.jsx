@@ -1,18 +1,13 @@
 import React from "react";
-import { DocumentSelector } from "./ContentNameSelector";
-import { VersionSelector } from "./VersionSelector";
-import { PublishButton } from "./PublishButton";
-import { Editor } from "./Editor";
-import { SaveButton } from "./SaveButton";
-import { promised } from "q";
 
 export class Metamory extends React.Component {
 	constructor(props) {
 		super(props);
 
 		this.state = {
-			contentName: props.contentName,
-			currentVersion: props.version,
+			contentName: props.contentName || "",
+			currentVersionId: props.versionId || "",
+			publishedVersionId: undefined,
 			availableVersions: [],
 			content: undefined
 		};
@@ -20,25 +15,65 @@ export class Metamory extends React.Component {
 
 
 	componentDidMount() {
-		//TODO: Remove this temporary content
-		this.setState({ content: `This is version ${this.state.currentVersion} of the ${this.state.contentName} page` })
-
-		console.log("*** Metamory.componentDidMount")
-		//TODO: Fetch content here!
-		//TODO: Fetch publishedVersion and availableVersions here!
-		
-		// some_promise.then(({publishedVersion, availableVersions}) => {
-		// 	this.setState({
-		// 		publishedVersion,
-		//		availableVersions
-		// 	});
-		// });
-
+		this.loadVersions(this.state.contentName)
+			.then(() => this.loadContent(this.state.contentName, this.state.currentVersionId))
+			.catch(err => console.warn(err));
 	}
 
 
 	componentWillUnmount() {
+	}
 
+
+	loadVersions(contentName) {
+		this.setState({
+			contentName,
+			currentVersionId: undefined,
+			content: ""
+		});
+
+		if (!contentName) {
+			return Promise.reject(new Error("Failed to load versions, since no content name was selected"));
+		}
+
+		const versionsUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${contentName}/versions`;
+		return fetch(versionsUrl)
+			.then(response => response.json())
+			.then(availableVersions => {
+				const publishedVersion = availableVersions.filter(version => version.isPublished)[0]
+				const publishedVersionId = publishedVersion && publishedVersion.versionId;
+				const latestVersionId = availableVersions[availableVersions.length - 1];
+				const currentVersionId = this.state.currentVersionId || publishedVersionId || latestVersionId;
+
+				this.setState({
+					publishedVersionId,
+					currentVersionId,
+					availableVersions
+				});
+			});
+	}
+
+	loadContent(contentName, versionId) {
+		this.setState({
+			contentName: undefined,
+			currentVersionId: versionId,
+			content: undefined
+		});
+
+		if (!versionId) {
+			return Promise.reject(new Error("Failed to load content, since no version was selected"));
+		}
+
+		const contentUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${contentName}/${versionId}`;
+		return fetch(contentUrl)
+			.then(response => response.text())
+			.then(content => {
+				this.setState({
+					contentName,
+					currentVersionId: versionId,
+					content
+				});
+			});
 	}
 
 
@@ -67,30 +102,44 @@ export class Metamory extends React.Component {
 
 
 	onChangeContentName = (data) => {
-		this.setState({ contentName: data.contentName });
+		this.setState({
+			contentName: data.contentName,
+			currentVersionId: undefined,
+			content: ""
+		});
+
+		this.loadVersions(data.contentName)
+			.then(() => this.loadContent(data.contentName, this.state.currentVersionId))
+			.catch(err => console.warn(err));
 	}
 
 
-	onChangeVersion = (data) => {
-		this.setState({ currentVersion: data.version });
+	onChangeVersionId = (data) => {
+		this.loadContent(this.state.contentName, data.versionId)
+			.catch(err => console.warn(err));
 	}
 
 
 	onEdit = (data) => {
-		this.setState({ content: data.content });
+		//TODO: Make sure edits are on a new and unsaved version
+		this.setState({
+			content: data.content,
+			currentVersionId: undefined
+		});
 	}
 
 
 	render() {
 		const newProps = {
 			contentName: this.state.contentName,
-			version: this.state.currentVersion,
-			content: this.state.content,
+			onChangeContentName: this.onChangeContentName,
+			publishedVersionId: this.state.publishedVersionId,
+			currentVersionId: this.state.currentVersionId,
+			onChangeVersionId: this.onChangeVersionId,
 			availableVersions: this.state.availableVersions,
+			content: this.state.content,
 			onPublish: this.onPublish,
 			onSave: this.onSave,
-			onChangeContentName: this.onChangeContentName,
-			onChangeVersion: this.onChangeVersion,
 			onEdit: this.onEdit
 		};
 		return <div className={"Metamory"}>
