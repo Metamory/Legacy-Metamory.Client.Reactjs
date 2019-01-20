@@ -9,14 +9,17 @@ export class Metamory extends React.Component {
 			currentVersionId: props.versionId || "",
 			publishedVersionId: undefined,
 			availableVersions: [],
-			content: undefined
+			content: undefined,
+
+			draft: undefined,
+			isDraftInAvailableVersions: false
 		};
 	}
 
 
 	componentDidMount() {
 		this.loadVersions(this.state.contentName)
-			.then(() => this.loadContent(this.state.contentName, this.state.currentVersionId))
+			.then(() => this.loadContent(this.state.currentVersionId))
 			.catch(err => console.warn(err));
 	}
 
@@ -53,9 +56,9 @@ export class Metamory extends React.Component {
 			});
 	}
 
-	loadContent(contentName, versionId) {
+	loadContent(versionId) {
 		this.setState({
-			contentName: undefined,
+			// contentName: undefined,
 			currentVersionId: versionId,
 			content: undefined
 		});
@@ -64,16 +67,56 @@ export class Metamory extends React.Component {
 			return Promise.reject(new Error("Failed to load content, since no version was selected"));
 		}
 
-		const contentUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${contentName}/${versionId}`;
+		if (versionId === "DRAFT") {
+			this.setState({
+				content: this.state.draft,
+				currentVersionId: "DRAFT"
+			});
+			return Promise.resolve();
+		}
+
+		const contentUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${this.state.contentName}/${versionId}`;
 		return fetch(contentUrl)
 			.then(response => response.text())
 			.then(content => {
 				this.setState({
-					contentName,
 					currentVersionId: versionId,
 					content
 				});
 			});
+	}
+
+
+	onChangeContentName = ({ contentName }) => {
+		this.setState({
+			contentName: contentName,
+			currentVersionId: undefined,
+			content: ""
+		});
+
+		this.loadVersions(contentName)
+			.then(() => this.loadContent(this.state.currentVersionId))
+			.catch(err => console.warn(err));
+	}
+
+
+	onChangeVersionId = ({ versionId }) => {
+		if (this.state.currentVersionId === "DRAFT") {
+			this.setState({
+				draft: this.state.content
+			});
+		}
+
+		if (versionId === "DRAFT") {
+			this.setState({
+				content: this.state.draft,
+				currentVersionId: versionId
+			});
+			return;
+		}
+
+		this.loadContent(versionId)
+			.catch(err => console.warn(err));
 	}
 
 
@@ -83,7 +126,7 @@ export class Metamory extends React.Component {
 
 		// some_promise.then((newlyPublishedVersion) => {
 		// 	this.setState({
-		// 		publishedVersion: newlyPublishedVersion
+		// 		publishedVersionId: newlyPublishedVersion.versionId
 		// 	});
 		// });
 	}
@@ -91,6 +134,7 @@ export class Metamory extends React.Component {
 
 	onSave = (data) => {
 		console.log("*** Metamory.onSave", { ...data, content: this.state.content });
+		//TODO: Set timestamp and copy version properties!
 		//TODO: Save content here!
 
 		// some_promise.then((newlySavedVersion) => {
@@ -100,31 +144,58 @@ export class Metamory extends React.Component {
 		// });
 	}
 
+	draftVersion = {
+		versionId: "DRAFT",
+		timestamp: undefined,
+		previousVersionId: undefined,
+		author: undefined,
+		label: undefined,
+		isPublished: false,
+		isDraft: true
+	};
 
-	onChangeContentName = (data) => {
+
+	ensureDraftInAvaliableVersions() {
+		if (this.state.isDraftInAvailableVersions) {
+			return;
+		}
+
 		this.setState({
-			contentName: data.contentName,
-			currentVersionId: undefined,
-			content: ""
+			isDraftInAvailableVersions: true,
+			availableVersions: [...this.state.availableVersions, this.draftVersion]
+		});
+	}
+
+
+	resetDraftIfVersionHasChanged() {
+		if (this.state.currentVersionId === "DRAFT") {
+			return;
+		}
+
+		Object.assign(this.draftVersion, {
+			previousVersionId: this.state.currentVersionId || undefined,
 		});
 
-		this.loadVersions(data.contentName)
-			.then(() => this.loadContent(data.contentName, this.state.currentVersionId))
-			.catch(err => console.warn(err));
-	}
-
-
-	onChangeVersionId = (data) => {
-		this.loadContent(this.state.contentName, data.versionId)
-			.catch(err => console.warn(err));
-	}
-
-
-	onEdit = (data) => {
-		//TODO: Make sure edits are on a new and unsaved version
 		this.setState({
-			content: data.content,
-			currentVersionId: undefined
+			content: this.state.draft
+		});
+	}
+
+
+	selectDraftAsCurrentVersion() {
+		this.setState({
+			currentVersionId: "DRAFT"
+		});
+	}
+
+
+	onEdit = ({content}) => {
+		this.ensureDraftInAvaliableVersions();
+		this.resetDraftIfVersionHasChanged();
+		this.selectDraftAsCurrentVersion();
+
+		this.setState({
+			content
 		});
 	}
 

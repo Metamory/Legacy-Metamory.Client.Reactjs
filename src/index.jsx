@@ -12,7 +12,10 @@ import { Metamory } from "./components/Metamory";
 
 ReactDOM.render(
 	<>
-		<Metamory serviceBaseUrl="http://some-metamory-server" siteName="test" contentName="agenda" versionId="">
+		<Metamory serviceBaseUrl="http://some-metamory-server"
+			siteName="testsite"
+			contentName="testcontent"
+		>
 			<ContentNameSelector />
 			<VersionSelector />
 			<PublishButton />
