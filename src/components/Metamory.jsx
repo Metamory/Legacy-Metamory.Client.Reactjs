@@ -40,12 +40,12 @@ export class Metamory extends React.Component {
 		}
 
 		const versionsUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${contentName}/versions`;
-		return fetch(versionsUrl)
+		return fetch(versionsUrl, {mode: "cors"})
 			.then(response => response.json())
 			.then(availableVersions => {
 				const publishedVersion = availableVersions.filter(version => version.isPublished)[0]
 				const publishedVersionId = publishedVersion && publishedVersion.versionId;
-				const latestVersionId = availableVersions[availableVersions.length - 1];
+				const latestVersionId = availableVersions[availableVersions.length - 1] && availableVersions[availableVersions.length - 1].versionId;
 				const currentVersionId = this.state.currentVersionId || publishedVersionId || latestVersionId;
 
 				this.setState({
@@ -76,7 +76,7 @@ export class Metamory extends React.Component {
 		}
 
 		const contentUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${this.state.contentName}/${versionId}`;
-		return fetch(contentUrl)
+		return fetch(contentUrl, {mode: "cors"})
 			.then(response => response.text())
 			.then(content => {
 				this.setState({
@@ -87,7 +87,7 @@ export class Metamory extends React.Component {
 	}
 
 
-	onChangeContentName = ({ contentName }) => {
+	onLoad = ({ contentName }) => {
 		this.setState({
 			contentName: contentName,
 			currentVersionId: undefined,
@@ -132,8 +132,27 @@ export class Metamory extends React.Component {
 	}
 
 
-	onSave = (data) => {
-		console.log("*** Metamory.onSave", { ...data, content: this.state.content });
+	onSave = ({label}) => {
+		console.log("*** Metamory.onSave", { label, content: this.state.content });
+
+		const contentUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${this.state.contentName}`;
+		const body = {
+			previousVersionId: this.draftVersion.previousVersionId,
+			content: this.state.content,
+			label,
+			contentType: this.props.contentType
+		};
+		fetch(contentUrl, { method: "POST", mode: "cors", cache: "no-cache", body: JSON.stringify(body) })
+			.then(newlyCreatedVersion => {
+				this.setState({
+					isDraftInAvailableVersions: false
+				});
+
+				delete this.draftVersion.isDraft;
+				Object.assign(this.draftVersion, newlyCreatedVersion);
+			});
+
+
 		//TODO: Set timestamp and copy version properties!
 		//TODO: Save content here!
 
@@ -144,21 +163,24 @@ export class Metamory extends React.Component {
 		// });
 	}
 
-	draftVersion = {
-		versionId: "DRAFT",
-		timestamp: undefined,
-		previousVersionId: undefined,
-		author: undefined,
-		label: undefined,
-		isPublished: false,
-		isDraft: true
-	};
+
+	draftVersion = undefined;
 
 
 	ensureDraftInAvaliableVersions() {
 		if (this.state.isDraftInAvailableVersions) {
 			return;
 		}
+
+		this.draftVersion = {
+			versionId: "DRAFT",
+			// timestamp: undefined,
+			previousVersionId: undefined,
+			// author: undefined,
+			// label: undefined,
+			isPublished: false,
+			isDraft: true
+		};
 
 		this.setState({
 			isDraftInAvailableVersions: true,
@@ -189,7 +211,7 @@ export class Metamory extends React.Component {
 	}
 
 
-	onEdit = ({content}) => {
+	onEdit = ({ content }) => {
 		this.ensureDraftInAvaliableVersions();
 		this.resetDraftIfVersionHasChanged();
 		this.selectDraftAsCurrentVersion();
@@ -203,12 +225,12 @@ export class Metamory extends React.Component {
 	render() {
 		const newProps = {
 			contentName: this.state.contentName,
-			onChangeContentName: this.onChangeContentName,
 			publishedVersionId: this.state.publishedVersionId,
 			currentVersionId: this.state.currentVersionId,
 			onChangeVersionId: this.onChangeVersionId,
 			availableVersions: this.state.availableVersions,
 			content: this.state.content,
+			onLoad: this.onLoad,
 			onPublish: this.onPublish,
 			onSave: this.onSave,
 			onEdit: this.onEdit

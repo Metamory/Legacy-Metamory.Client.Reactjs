@@ -20,7 +20,7 @@ export class ContentNameSelector extends React.Component {
 
 
 	onLoad = (event) => {
-		this.props.onChangeContentName({ contentName: this.state.contentName });
+		this.props.onLoad({ contentName: this.state.contentName });
 	}
 
 
