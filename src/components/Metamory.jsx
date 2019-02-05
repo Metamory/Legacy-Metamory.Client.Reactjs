@@ -143,13 +143,17 @@ export class Metamory extends React.Component {
 			contentType: this.props.contentType
 		};
 		fetch(contentUrl, { method: "POST", mode: "cors", cache: "no-cache", body: JSON.stringify(body) })
+			.then(response => response.json())
 			.then(newlyCreatedVersion => {
+				console.log("*** 1", this.draftVersion);
+				console.log("*** 2", newlyCreatedVersion);
+				delete this.draftVersion.isDraft;
+				Object.assign(this.draftVersion, newlyCreatedVersion);
+				console.log("*** 3", this.draftVersion);
+
 				this.setState({
 					isDraftInAvailableVersions: false
 				});
-
-				delete this.draftVersion.isDraft;
-				Object.assign(this.draftVersion, newlyCreatedVersion);
 			});
 
 
