@@ -1,5 +1,7 @@
 import React from "react";
 
+const DRAFT = "DRAFT";
+
 export class Metamory extends React.Component {
 	constructor(props) {
 		super(props);
@@ -12,7 +14,7 @@ export class Metamory extends React.Component {
 			content: undefined,
 
 			draft: undefined,
-			isDraftInAvailableVersions: false
+			draftVersion: undefined
 		};
 	}
 
@@ -67,10 +69,10 @@ export class Metamory extends React.Component {
 			return Promise.reject(new Error("Failed to load content, since no version was selected"));
 		}
 
-		if (versionId === "DRAFT") {
+		if (versionId === DRAFT) {
 			this.setState({
 				content: this.state.draft,
-				currentVersionId: "DRAFT"
+				currentVersionId: DRAFT
 			});
 			return Promise.resolve();
 		}
@@ -101,13 +103,13 @@ export class Metamory extends React.Component {
 
 
 	onChangeVersionId = ({ versionId }) => {
-		if (this.state.currentVersionId === "DRAFT") {
+		if (this.state.currentVersionId === DRAFT) {
 			this.setState({
 				draft: this.state.content
 			});
 		}
 
-		if (versionId === "DRAFT") {
+		if (versionId === DRAFT) {
 			this.setState({
 				content: this.state.draft,
 				currentVersionId: versionId
@@ -123,6 +125,7 @@ export class Metamory extends React.Component {
 	onPublish = (data) => {
 		console.log("*** Metamory.onPublish", data);
 		//TODO: Publish here!
+		// - inputs: publication time, versionId
 
 		// some_promise.then((newlyPublishedVersion) => {
 		// 	this.setState({
@@ -133,11 +136,9 @@ export class Metamory extends React.Component {
 
 
 	onSave = ({label}) => {
-		console.log("*** Metamory.onSave", { label, content: this.state.content });
-
 		const contentUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${this.state.contentName}`;
 		const body = {
-			previousVersionId: this.draftVersion.previousVersionId,
+			previousVersionId: this.state.draftVersion.previousVersionId,
 			content: this.state.content,
 			label,
 			contentType: this.props.contentType
@@ -145,64 +146,27 @@ export class Metamory extends React.Component {
 		fetch(contentUrl, { method: "POST", mode: "cors", cache: "no-cache", body: JSON.stringify(body) })
 			.then(response => response.json())
 			.then(newlyCreatedVersion => {
-				console.log("*** 1", this.draftVersion);
-				console.log("*** 2", newlyCreatedVersion);
-				delete this.draftVersion.isDraft;
-				Object.assign(this.draftVersion, newlyCreatedVersion);
-				console.log("*** 3", this.draftVersion);
-
 				this.setState({
-					isDraftInAvailableVersions: false
+					availableVersions: [...this.state.availableVersions, newlyCreatedVersion],
+					currentVersionId: newlyCreatedVersion.versionId,
+					draftVersion: undefined
 				});
 			});
-
-
-		//TODO: Set timestamp and copy version properties!
-		//TODO: Save content here!
-
-		// some_promise.then((newlySavedVersion) => {
-		// 	this.setState({
-		// 		availableVersions: [...availableVersions, newlySavedVersion]
-		// 	});
-		// });
-	}
-
-
-	draftVersion = undefined;
-
-
-	ensureDraftInAvaliableVersions() {
-		if (this.state.isDraftInAvailableVersions) {
-			return;
-		}
-
-		this.draftVersion = {
-			versionId: "DRAFT",
-			// timestamp: undefined,
-			previousVersionId: undefined,
-			// author: undefined,
-			// label: undefined,
-			isPublished: false,
-			isDraft: true
-		};
-
-		this.setState({
-			isDraftInAvailableVersions: true,
-			availableVersions: [...this.state.availableVersions, this.draftVersion]
-		});
 	}
 
 
 	resetDraftIfVersionHasChanged() {
-		if (this.state.currentVersionId === "DRAFT") {
+		if (this.state.currentVersionId === DRAFT) {
 			return;
 		}
 
-		Object.assign(this.draftVersion, {
-			previousVersionId: this.state.currentVersionId || undefined,
-		});
-
 		this.setState({
+			draftVersion: {
+				versionId: DRAFT,
+				previousVersionId: this.state.currentVersionId || undefined,
+				isPublished: false,
+				isDraft: true
+			},
 			content: this.state.draft
 		});
 	}
@@ -210,13 +174,12 @@ export class Metamory extends React.Component {
 
 	selectDraftAsCurrentVersion() {
 		this.setState({
-			currentVersionId: "DRAFT"
+			currentVersionId: DRAFT
 		});
 	}
 
 
 	onEdit = ({ content }) => {
-		this.ensureDraftInAvaliableVersions();
 		this.resetDraftIfVersionHasChanged();
 		this.selectDraftAsCurrentVersion();
 
@@ -232,7 +195,9 @@ export class Metamory extends React.Component {
 			publishedVersionId: this.state.publishedVersionId,
 			currentVersionId: this.state.currentVersionId,
 			onChangeVersionId: this.onChangeVersionId,
-			availableVersions: this.state.availableVersions,
+			availableVersions: this.state.draftVersion === undefined
+				? this.state.availableVersions
+				: [...this.state.availableVersions, this.state.draftVersion],
 			content: this.state.content,
 			onLoad: this.onLoad,
 			onPublish: this.onPublish,
