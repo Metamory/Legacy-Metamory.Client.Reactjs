@@ -21,7 +21,7 @@ export const VersionSelector = (props) => {
 						<option value={version.versionId} key={ix}>
 							{version.isPublished ? "*" : ""}
 							{version.versionId}
-							{version.label && `(${version.label})`}
+							{version.label && ` (${version.label})`}
 						</option>)}
 				</select>
 			</div>
