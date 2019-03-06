@@ -123,15 +123,24 @@ export class Metamory extends React.Component {
 
 
 	onPublish = (data) => {
-		console.log("*** Metamory.onPublish", data);
-		//TODO: Publish here!
-		// - inputs: publication time, versionId
+		const contentUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${this.state.contentName}/${this.state.currentVersionId}/status`;
+		const body = {
+			status: "Published",
+			// startDate: "",	// publication date
+			// responsible: "",
+		};
+		const headers = {
+			'Content-Type': 'application/json'
+		};
+		fetch(contentUrl, { method: "POST", mode: "cors", cache: "no-cache", headers, body: JSON.stringify(body) })
+			.then(response => response.json())
+			.then(response => {
+				// console.log("*** Metamory.onPublish returned", response);
+				this.setState({
+					publishedVersionId: response.filter(statusItem => statusItem.isPublished)[0]
+				});
+			});
 
-		// some_promise.then((newlyPublishedVersion) => {
-		// 	this.setState({
-		// 		publishedVersionId: newlyPublishedVersion.versionId
-		// 	});
-		// });
 	}
 
 
@@ -143,7 +152,10 @@ export class Metamory extends React.Component {
 			label,
 			contentType: this.props.contentType
 		};
-		fetch(contentUrl, { method: "POST", mode: "cors", cache: "no-cache", body: JSON.stringify(body) })
+		const headers = {
+			'Content-Type': 'application/json'
+		};
+		fetch(contentUrl, { method: "POST", mode: "cors", cache: "no-cache", headers, body: JSON.stringify(body) })
 			.then(response => response.json())
 			.then(newlyCreatedVersion => {
 				this.setState({
