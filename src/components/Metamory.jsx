@@ -135,9 +135,10 @@ export class Metamory extends React.Component {
 		fetch(contentUrl, { method: "POST", mode: "cors", cache: "no-cache", headers, body: JSON.stringify(body) })
 			.then(response => response.json())
 			.then(response => {
-				// console.log("*** Metamory.onPublish returned", response);
+				const publishedVersionId = response.filter(statusItem => statusItem.isPublished)[0].versionId;
+				// console.log("*** new published version should be", publishedVersionId);
 				this.setState({
-					publishedVersionId: response.filter(statusItem => statusItem.isPublished)[0]
+					publishedVersionId
 				});
 			});
 
