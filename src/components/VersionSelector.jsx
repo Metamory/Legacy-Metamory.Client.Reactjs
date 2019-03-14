@@ -19,7 +19,7 @@ export const VersionSelector = (props) => {
 				>
 					{props.availableVersions.map((version, ix) =>
 						<option value={version.versionId} key={ix}>
-							{version.isPublished ? "*" : ""}
+							{version.versionId === props.publishedVersionId ? "*" : ""}
 							{version.versionId}
 							{version.label && ` (${version.label})`}
 						</option>)}
