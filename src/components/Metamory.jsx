@@ -44,14 +44,14 @@ export class Metamory extends React.Component {
 		const versionsUrl = `${this.props.serviceBaseUrl}/${this.props.siteName}/${contentName}/versions`;
 		return fetch(versionsUrl, {mode: "cors"})
 			.then(response => response.json())
-			.then(availableVersions => {
-				const publishedVersion = availableVersions.filter(version => version.isPublished)[0]
-				const publishedVersionId = publishedVersion && publishedVersion.versionId;
+			.then(metadata => {
+				const availableVersions = metadata.versions;
+				const publishedVersionId = metadata.publishedVersionId;
 				const latestVersionId = availableVersions[availableVersions.length - 1] && availableVersions[availableVersions.length - 1].versionId;
 				const currentVersionId = this.state.currentVersionId || publishedVersionId || latestVersionId;
 
 				this.setState({
-					publishedVersionId,
+					publishedVersionId: metadata.publishedVersionId,
 					currentVersionId,
 					availableVersions
 				});
